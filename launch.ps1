@@ -7,6 +7,7 @@ $ErrorActionPreference = "Stop"
 $ManagerUrl = "https://raw.githubusercontent.com/TeamUBHub/Grow-Farmer/refs/heads/main/manager.py"
 $VersionUrl = "https://raw.githubusercontent.com/TeamUBHub/Grow-Farmer/refs/heads/main/version.json"
 
+
 $Root      = Join-Path $env:LOCALAPPDATA "RobloxManager"
 $PyDir     = Join-Path $Root "python"
 $PyExe     = Join-Path $PyDir "python.exe"
@@ -82,6 +83,7 @@ function Install-MicroPython {
 function Ensure-DesktopShortcut {
     $shortcutPath = Join-Path ([Environment]::GetFolderPath("Desktop")) "Roblox Account Manager.lnk"
     if (Test-Path $shortcutPath) {
+        Write-Info "Desktop shortcut already exists at $shortcutPath - skipping prompt."
         return
     }
 

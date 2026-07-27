@@ -15,6 +15,7 @@ import websockets
 
 colorama_init(autoreset=True)
 
+LUA_URL = "https://raw.githubusercontent.com/TeamUBHub/Grow-Farmer/refs/heads/main/ClientLoader.lua"
 DATA_FILE = os.path.join(os.path.expanduser("~"), ".roblox_manager_accounts.json")
 STATE_FILE = os.path.join(os.path.expanduser("~"), ".roblox_manager_state.json")
 WS_HOST = "127.0.0.1"
@@ -657,6 +658,52 @@ def kill_and_advance() -> tuple[bool, str]:
     err("Every configured server failed to launch.")
     return False, "Every configured server failed to launch."
 
+def install_client_lua():
+    user_profile = os.environ.get("USERPROFILE", "")
+    if not user_profile:
+        err("USERPROFILE environment variable not found.")
+        return
+
+    info(f"Searching for autoexec folders in {user_profile}...")
+    autoexec_folders = []
+
+    for root, dirs, _ in os.walk(user_profile):
+        for d in dirs:
+            if d.lower() == "autoexec":
+                autoexec_folders.append(os.path.join(root, d))
+
+    if not autoexec_folders:
+        warn("No autoexec folders found.")
+        info("Please Download from https://raw.githubusercontent.com/TeamUBHub/Grow-Farmer/refs/heads/main/ClientLoader.lua and add it manually to autoexec.")
+        return
+
+    info("Found autoexec directories:")
+    for idx, folder in enumerate(autoexec_folders, 1):
+        info(f" [{idx}] {folder}")
+
+    selection = 0
+    while selection < 1 or selection > len(autoexec_folders):
+        try:
+            choice = input(f"Select folder number (1-{len(autoexec_folders)}): ")
+            selection = int(choice)
+        except ValueError:
+            pass
+
+    target_folder = autoexec_folders[selection - 1]
+    target_file = os.path.join(target_folder, "Client.lua")
+
+    info(f"Downloading Client.lua to: {target_file}...")
+    try:
+        response = requests.get(LUA_URL, timeout=10)
+        response.raise_for_status()
+        
+        with open(target_file, "wb") as f:
+            f.write(response.content)
+            
+        print(f"Successfully saved Client.lua to {target_file}")
+    except Exception as e:
+        print(f"Failed to download Client.lua: {e}")
+
 
 async def ws_handler(websocket):
     remote = websocket.remote_address
@@ -718,7 +765,6 @@ def run_ws_server():
 def main():
     if os.name != "nt":
         warn("This tool is designed for Windows.")
-
     threading.Thread(target=run_ws_server, daemon=True).start()
     info(f"Websocket control listening on ws://{WS_HOST}:{WS_PORT}")
     info('Send JSON like {"action":"launch","username":"YourAlt","server":"Farm 1"}')
@@ -726,6 +772,7 @@ def main():
     info('{"action":"kill"} closes Roblox and launches the next account in rotation.')
     info('{"action":"stop"} just closes Roblox with no relaunch.')
     info('{"action":"ping"} returns {"ok":true,"status":"alive","accounts":N,"servers":N} for health checks.')
+    info('Install the Client to Autoexecute, if the script does not find your executor please manually copy the file.')
 
     while True:
         header("Roblox Account Manager | Grow A Garden 2 Guild Event Farmer")
@@ -735,7 +782,8 @@ def main():
         print("  4. Kill Roblox (and launch next account)")
         print("  5. Configure account (place / private server)")
         print("  6. Remove account")
-        print("  7. Quit")
+        print("  7. Install Client.lua to autoexec")
+        print("  8. Quit")
         choice = input("\n> ").strip()
 
         if choice == "1":
@@ -766,6 +814,8 @@ def main():
         elif choice == "6":
             remove_account()
         elif choice == "7":
+            install_client_lua()
+        elif choice == "8":
             print("Bye!")
             sys.exit(0)
         else:

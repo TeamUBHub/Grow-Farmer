@@ -55,7 +55,7 @@ EstablishConnection()
 task.wait(10)
 
 local function MoveToPosition(TargetCFrame)
-    local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    local Character = LocalPlayer.CharacterAdded:Wait()
     local RootPart = Character:WaitForChild("HumanoidRootPart")
     local Distance = (RootPart.Position - TargetCFrame.Position).Magnitude
     local TweenInfoData = TweenInfo.new(Distance / 35, Enum.EasingStyle.Linear)

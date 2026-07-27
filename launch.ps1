@@ -4,12 +4,14 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$ManagerUrl = "https://raw.githubusercontent.com/YOURUSER/YOURREPO/main/manager.py"
+$ManagerUrl = "https://raw.githubusercontent.com/TeamUBHub/Grow-Farmer/refs/heads/main/manager.py"
+$VersionUrl = "https://raw.githubusercontent.com/TeamUBHub/Grow-Farmer/refs/heads/main/version.json"
 
 $Root      = Join-Path $env:LOCALAPPDATA "RobloxManager"
 $PyDir     = Join-Path $Root "python"
 $PyExe     = Join-Path $PyDir "python.exe"
 $ManagerPy = Join-Path $Root "manager.py"
+$LocalVersionFile = Join-Path $Root "version.json"
 $WsHost    = "127.0.0.1"
 $WsPort    = 8765
 
@@ -108,12 +110,47 @@ function Ensure-DesktopShortcut {
     Write-Ok "Desktop shortcut created."
 }
 
+function Check-ForUpdate {
+    try {
+        $remote = Invoke-WebRequest -Uri $VersionUrl -UseBasicParsing | Select-Object -ExpandProperty Content | ConvertFrom-Json
+    } catch {
+        Write-Warn "Could not check for updates (version.json unreachable) - continuing anyway."
+        return
+    }
+
+    $localManagerVersion = "none"
+    $localLaunchVersion  = "none"
+    if (Test-Path $LocalVersionFile) {
+        try {
+            $local = Get-Content $LocalVersionFile -Raw | ConvertFrom-Json
+            $localManagerVersion = $local.manager
+            $localLaunchVersion  = $local.launch
+        } catch {}
+    }
+
+    if ($localManagerVersion -ne $remote.manager) {
+        Write-Ok "manager.py update: $localManagerVersion -> $($remote.manager)"
+    } else {
+        Write-Info "manager.py up to date (v$($remote.manager))"
+    }
+
+    if ($localLaunchVersion -ne $remote.launch) {
+        Write-Ok "launch.ps1 update: $localLaunchVersion -> $($remote.launch)"
+    } else {
+        Write-Info "launch.ps1 up to date (v$($remote.launch))"
+    }
+
+    $remote | ConvertTo-Json | Set-Content $LocalVersionFile
+}
+
 New-Item -ItemType Directory -Force -Path $Root | Out-Null
 
 if (Test-ManagerRunning) {
     Write-Ok "Manager already running on ${WsHost}:${WsPort} - not starting a second instance."
     exit 0
 }
+
+Check-ForUpdate
 
 Write-Info "Fetching latest manager.py..."
 Invoke-WebRequest -Uri $ManagerUrl -OutFile $ManagerPy -UseBasicParsing

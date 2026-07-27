@@ -4,28 +4,41 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$ManagerUrl = "https://raw.githubusercontent.com/TeamUBHub/Grow-Farmer/refs/heads/main/manager.py"
+$ManagerUrl = "https://raw.githubusercontent.com/YOURUSER/YOURREPO/main/manager.py"
 
-$Root       = Join-Path $env:LOCALAPPDATA "RobloxManager"
-$PyDir      = Join-Path $Root "python"
-$PyExe      = Join-Path $PyDir "python.exe"
-$ManagerPy  = Join-Path $Root "manager.py"
-$WsHost     = "127.0.0.1"
-$WsPort     = 8765
+$Root      = Join-Path $env:LOCALAPPDATA "RobloxManager"
+$PyDir     = Join-Path $Root "python"
+$PyExe     = Join-Path $PyDir "python.exe"
+$ManagerPy = Join-Path $Root "manager.py"
+$WsHost    = "127.0.0.1"
+$WsPort    = 8765
 
-New-Item -ItemType Directory -Force -Path $Root | Out-Null
+function Write-Info {
+    param([string]$msg)
+    Write-Host "[i] $msg" -ForegroundColor Cyan
+}
 
-function Write-Info($msg)  { Write-Host "[i] $msg" -ForegroundColor Cyan }
-function Write-Ok($msg)    { Write-Host "[+] $msg" -ForegroundColor Green }
-function Write-Warn($msg)  { Write-Host "[!] $msg" -ForegroundColor Yellow }
-function Write-ErrMsg($msg){ Write-Host "[x] $msg" -ForegroundColor Red }
+function Write-Ok {
+    param([string]$msg)
+    Write-Host "[+] $msg" -ForegroundColor Green
+}
+
+function Write-Warn {
+    param([string]$msg)
+    Write-Host "[!] $msg" -ForegroundColor Yellow
+}
+
+function Write-ErrMsg {
+    param([string]$msg)
+    Write-Host "[x] $msg" -ForegroundColor Red
+}
 
 function Test-ManagerRunning {
     try {
         $client = New-Object System.Net.Sockets.TcpClient
         $iar = $client.BeginConnect($WsHost, $WsPort, $null, $null)
-        $ok = $iar.AsyncWaitHandle.WaitOne(500, $false)
-        if ($ok -and $client.Connected) {
+        $connected = $iar.AsyncWaitHandle.WaitOne(500, $false)
+        if ($connected -and $client.Connected) {
             $client.Close()
             return $true
         }
@@ -36,16 +49,8 @@ function Test-ManagerRunning {
     }
 }
 
-if (Test-ManagerRunning) {
-    Write-Ok "Manager already running on ${WsHost}:${WsPort} — not starting a second instance."
-    exit 0
-}
-
-Write-Info "Fetching latest manager.py..."
-Invoke-WebRequest -Uri $ManagerUrl -OutFile $ManagerPy -UseBasicParsing
-
 function Install-MicroPython {
-    Write-Info "No local Python found — setting up an isolated copy in $PyDir ..."
+    Write-Info "No local Python found - setting up an isolated copy in $PyDir ..."
     New-Item -ItemType Directory -Force -Path $PyDir | Out-Null
 
     $pyVersion = "3.12.4"
@@ -56,6 +61,7 @@ function Install-MicroPython {
     Invoke-WebRequest -Uri $embedUrl -OutFile $zipPath -UseBasicParsing
     Expand-Archive -Path $zipPath -DestinationPath $PyDir -Force
     Remove-Item $zipPath -Force
+
     $pthFile = Get-ChildItem -Path $PyDir -Filter "python*._pth" | Select-Object -First 1
     if ($pthFile) {
         (Get-Content $pthFile.FullName) -replace '^#\s*import site', 'import site' |
@@ -70,17 +76,6 @@ function Install-MicroPython {
 
     Write-Ok "Isolated Python environment ready."
 }
-
-if (-not (Test-Path $PyExe)) {
-    Install-MicroPython
-} else {
-    Write-Info "Using existing isolated Python at $PyDir"
-}
-
-Write-Info "Installing/updating required packages..."
-$packages = @("selenium", "webdriver-manager", "colorama", "requests", "websockets")
-& $PyExe -m pip install --upgrade --no-warn-script-location $packages | Out-Null
-Write-Ok "Packages ready."
 
 function Ensure-DesktopShortcut {
     $shortcutPath = Join-Path ([Environment]::GetFolderPath("Desktop")) "Roblox Account Manager.lnk"
@@ -112,6 +107,27 @@ function Ensure-DesktopShortcut {
 
     Write-Ok "Desktop shortcut created."
 }
+
+New-Item -ItemType Directory -Force -Path $Root | Out-Null
+
+if (Test-ManagerRunning) {
+    Write-Ok "Manager already running on ${WsHost}:${WsPort} - not starting a second instance."
+    exit 0
+}
+
+Write-Info "Fetching latest manager.py..."
+Invoke-WebRequest -Uri $ManagerUrl -OutFile $ManagerPy -UseBasicParsing
+
+if (-not (Test-Path $PyExe)) {
+    Install-MicroPython
+} else {
+    Write-Info "Using existing isolated Python at $PyDir"
+}
+
+Write-Info "Installing/updating required packages..."
+$packages = @("selenium", "webdriver-manager", "colorama", "requests", "websockets")
+& $PyExe -m pip install --upgrade --no-warn-script-location $packages | Out-Null
+Write-Ok "Packages ready."
 
 Ensure-DesktopShortcut
 

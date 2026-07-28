@@ -2,7 +2,6 @@ if game.GameId ~= 10200395747 then return end
 local HttpService = game:GetService("HttpService")
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
 
 local WS_URL = "ws://127.0.0.1:8765"
 local WebSocketConnection = nil
@@ -55,6 +54,7 @@ EstablishConnection()
 task.wait(10)
 
 local function MoveToPosition(TargetCFrame)
+    local LocalPlayer = Players.LocalPlayer
     local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
     local RootPart = Character:WaitForChild("HumanoidRootPart")
     local Distance = (RootPart.Position - TargetCFrame.Position).Magnitude

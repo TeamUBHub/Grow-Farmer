@@ -1,4 +1,5 @@
 if game.GameId ~= 10200395747 then return end
+
 local HttpService = game:GetService("HttpService")
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
@@ -51,7 +52,12 @@ local function Terminate()
     return SendMessage({action = "kill"})
 end
 
-EstablishConnection()
+local Connected = EstablishConnection()
+
+if not Connected then
+    warn("WebSocket connection failed. Aborting script execution.")
+    return
+end
 
 local function GetRootPart()
     local LocalPlayer = Players.LocalPlayer
@@ -102,15 +108,20 @@ GuiService.ErrorMessageChanged:Connect(function()
         Terminate()
     end
 end)
+
 task.wait(30)
+
 local WildPetReference = workspace.Map:WaitForChild("WildPetRef")
 repeat task.wait(0.5) until #WildPetReference:GetChildren() > 0
+
 local Pets = WildPetReference:GetChildren()
 local RemainingPets = #Pets
+
 for _, Pet in ipairs(Pets) do
     HandlePet(Pet)
     RemainingPets -= 1
 end
+
 repeat task.wait(0.1) until RemainingPets <= 0
 
 Terminate()

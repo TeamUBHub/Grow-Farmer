@@ -55,7 +55,7 @@ EstablishConnection()
 task.wait(10)
 
 local function MoveToPosition(TargetCFrame)
-    local Character = LocalPlayer.CharacterAdded:Wait()
+    local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
     local RootPart = Character:WaitForChild("HumanoidRootPart")
     local Distance = (RootPart.Position - TargetCFrame.Position).Magnitude
     local TweenInfoData = TweenInfo.new(Distance / 35, Enum.EasingStyle.Linear)
@@ -82,9 +82,8 @@ local function HandlePet(PetObject)
 end
 
 local WildPetReference = workspace.Map:WaitForChild("WildPetRef")
-if WildPetReference then
-    for _, Pet in ipairs(WildPetReference:GetChildren()) do
-        HandlePet(Pet)
-    end
-    Terminate()
+repeat task.wait(0.5) until #WildPetReference:GetChildren() > 0
+for _, Pet in ipairs(WildPetReference:GetChildren()) do
+    HandlePet(Pet)
 end
+Terminate()

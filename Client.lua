@@ -2,6 +2,7 @@ if game.GameId ~= 10200395747 then return end
 local HttpService = game:GetService("HttpService")
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
+local GuiService = game:GetService("GuiService")
 
 local WS_URL = "ws://127.0.0.1:8765"
 local WebSocketConnection = nil
@@ -51,12 +52,25 @@ local function Terminate()
 end
 
 EstablishConnection()
-task.wait(10)
+
+local function GetRootPart()
+    local LocalPlayer = Players.LocalPlayer
+    local Character = LocalPlayer.Character
+    if not Character or not Character.Parent then
+        Character = LocalPlayer.CharacterAdded:Wait()
+    end
+    local RootPart = Character:WaitForChild("HumanoidRootPart", 5)
+    if not RootPart then
+        Character = LocalPlayer.CharacterAdded:Wait()
+        RootPart = Character:WaitForChild("HumanoidRootPart")
+    end
+    
+    return RootPart
+end
 
 local function MoveToPosition(TargetCFrame)
-    local LocalPlayer = Players.LocalPlayer
-    local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-    local RootPart = Character:WaitForChild("HumanoidRootPart")
+    local RootPart = GetRootPart()
+    if not RootPart then return end
     local Distance = (RootPart.Position - TargetCFrame.Position).Magnitude
     local TweenInfoData = TweenInfo.new(Distance / 35, Enum.EasingStyle.Linear)
     local Tween = TweenService:Create(RootPart, TweenInfoData, {CFrame = TargetCFrame})
@@ -76,14 +90,27 @@ local function HandlePet(PetObject)
     local PrimaryPart = PetObject:IsA("Model") and (PetObject.PrimaryPart or PetObject:FindFirstChildWhichIsA("BasePart")) or PetObject
     if PrimaryPart then
         MoveToPosition(PrimaryPart.CFrame * CFrame.new(0, 3, 0))
-        task.wait(0.1)
         SendTamePacket(PetObject)
+        task.wait(1)
     end
 end
 
+GuiService.ErrorMessageChanged:Connect(function()
+    local ErrorType = GuiService:GetErrorType()
+    if ErrorType == Enum.ConnectionError.DisconnectErrors then
+        task.wait(1)
+        Terminate()
+    end
+end)
+task.wait(30)
 local WildPetReference = workspace.Map:WaitForChild("WildPetRef")
 repeat task.wait(0.5) until #WildPetReference:GetChildren() > 0
-for _, Pet in ipairs(WildPetReference:GetChildren()) do
+local Pets = WildPetReference:GetChildren()
+local RemainingPets = #Pets
+for _, Pet in ipairs(Pets) do
     HandlePet(Pet)
+    RemainingPets -= 1
 end
+repeat task.wait(0.1) until RemainingPets <= 0
+
 Terminate()
